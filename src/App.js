@@ -1,25 +1,44 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { useState, useEffect } from 'react';
+import DaftarPengguna from './components/DaftarPengguna';
 
-function App() {
+const App = () => {
+  const [pengguna, setPengguna] = useState([]);
+  const [memuat, setMemuat] = useState(false);
+
+  const ambilPengguna = async () => {
+    setMemuat(true);
+    const cache = localStorage.getItem('penggunaCache');
+    if (cache) {
+      setPengguna(JSON.parse(cache));
+      setMemuat(false);
+      return;
+    }
+    try {
+      const respon = await fetch('http://localhost:3000/api/pengguna?jumlah=100');
+      const data = await respon.json();
+      const pekerja = new Worker('worker.js');
+      pekerja.postMessage(data);
+      pekerja.onmessage = (e) => {
+        localStorage.setItem('penggunaCache', JSON.stringify(e.data));
+        setPengguna(e.data);
+        setMemuat(false);
+      };
+    } catch (err) {
+      console.error('Gagal mengambil data:', err);
+      setMemuat(false);
+    }
+  };
+
+  useEffect(() => {
+    ambilPengguna();
+  }, []);
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div style={{ padding: '20px' }}>
+      <h1>Eksplorasi Pengguna (Umur {'>'} 30)</h1>
+      {memuat ? <p>Sedang memuat...</p> : <DaftarPengguna pengguna={pengguna} />}
     </div>
   );
-}
+};
 
 export default App;
